@@ -2,144 +2,10 @@ import streamlit as st
 import time
 import random
 
-# -------------- Setup -----------------
+# -------------- Setup --------------
 st.set_page_config(page_title="SmartTaskBot", page_icon="✨")
 
-# ---------------- Theme Toggle ----------------
-theme = st.sidebar.radio("Choose Theme:", ["Light Mode 🌞", "Dark Mode 🌙"])
-
-if theme == "Dark Mode 🌙":
-    st.markdown(
-        """
-        <style>
-        html, body, [data-testid="stApp"] {
-            background-color: #1e1e1e;
-            color: #ffffff;
-        }
-
-        /* Sidebar Styling */
-        [data-testid="stSidebar"] {
-            background-color: #2c2c2c;
-            color: #ffffff;
-        }
-
-        .stSidebar .stMarkdown {
-            color: #ffffff;
-        }
-
-        /* Text Inputs, Text Area, and Radio Buttons */
-        .stTextInput > div > div > input,
-        .stTextArea > div > textarea,
-        .stRadio > div,
-        .stMarkdown {
-            color: #ffffff !important;
-            background-color: #2c2c2c !important;
-        }
-
-        /* Radio Buttons */
-        .stRadio label, .stRadio div[role="radiogroup"] > div {
-            color: #ffffff !important;
-        }
-
-        /* Fix Button Styling */
-        .stButton > button {
-            background-color: #007BFF;
-            color: white !important;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-        }
-
-        .stButton > button:hover {
-            background-color: #0056b3;
-        }
-
-        /* Fix the Radio Button hover color */
-        .stRadio div[role="radiogroup"] > div:hover {
-            background-color: #444444 !important;
-        }
-
-        /* Fix reminders text */
-        .stSidebar .stMarkdown {
-            color: #ffffff;
-        }
-
-        /* Light/Dark Mode toggle label */
-        .stRadio > div {
-            color: #ffffff !important;
-        }
-
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-else:
-    st.markdown(
-        """
-        <style>
-        html, body, [data-testid="stApp"] {
-            background-color: #ffffff;
-            color: #000000;
-        }
-
-        /* Sidebar Styling */
-        [data-testid="stSidebar"] {
-            background-color: #f0f2f6;
-            color: #000000;
-        }
-
-        .stSidebar .stMarkdown {
-            color: #000000;
-        }
-
-        /* Text Inputs, Text Area, and Radio Buttons */
-        .stTextInput > div > div > input,
-        .stTextArea > div > textarea,
-        .stRadio > div,
-        .stMarkdown {
-            color: #000000 !important;
-            background-color: #ffffff !important;
-        }
-
-        /* Radio Buttons */
-        .stRadio label, .stRadio div[role="radiogroup"] > div {
-            color: #000000 !important;
-        }
-
-        /* Fix Button Styling */
-        .stButton > button {
-            background-color: #007BFF;
-            color: white !important;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-        }
-
-        .stButton > button:hover {
-            background-color: #0056b3;
-        }
-
-        /* Fix the Radio Button hover color */
-        .stRadio div[role="radiogroup"] > div:hover {
-            background-color: #d3d3d3 !important;
-        }
-
-        /* Fix reminders text */
-        .stSidebar .stMarkdown {
-            color: #000000;
-        }
-
-        /* Light/Dark Mode toggle label */
-        .stRadio > div {
-            color: #000000 !important;
-        }
-
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-# -------------- Gentle Reminders -----------------
+# -------------- Gentle Reminders --------------
 reminders = [
     "Take a deep breath and stretch a little!",
     "Stay hydrated — a glass of water never hurts.",
@@ -151,57 +17,83 @@ reminders = [
 if 'last_reminder_time' not in st.session_state:
     st.session_state['last_reminder_time'] = time.time()
 
-if time.time() - st.session_state['last_reminder_time'] > 0:  # Every 1 minute (change to 1800 for 30 mins)
+if time.time() - st.session_state['last_reminder_time'] > 60:
     st.sidebar.info(random.choice(reminders))
     st.session_state['last_reminder_time'] = time.time()
 
-# -------------- UI Title & Mood Check -----------------
+# -------------- Session State --------------
+if "tasks" not in st.session_state:
+    st.session_state.tasks = []
+if "cleared" not in st.session_state:
+    st.session_state.cleared = False
+
+# -------------- UI --------------
 st.title("✨ SmartTaskBot ✨")
-st.subheader("Hi Anicka! Let's gently plan your day.")
+st.subheader("Hi Anicka! Let’s gently plan your day.")
 
 mood = st.radio("How are you feeling today?", ["Energetic ⚡", "Neutral ☁", "Tired 💤"])
-st.markdown("---")
 
-# -------------- Task Input -----------------
-tasks_input = st.text_area("📝 Enter your tasks (separated by commas):", 
+# Task Input
+tasks_input = st.text_area("📝 Enter your tasks (separated by commas):",
                            placeholder="e.g., submit report, reply to email, call mom")
 
-if st.button("Prioritize My Day 💡"):
-
-    if not tasks_input.strip():
-        st.warning("Oops! You didn’t add any tasks. Just take your time.")
+# Add to My Day (optional)
+if st.button("Add to My Day"):
+    if tasks_input.strip():
+        new_tasks = [task.strip() for task in tasks_input.split(",") if task.strip()]
+        for task in new_tasks:
+            if task not in st.session_state.tasks:
+                st.session_state.tasks.append(task)
+        st.success("Tasks added to your saved list!")
     else:
-        tasks = [task.strip() for task in tasks_input.split(",") if task.strip()]
+        st.warning("Please enter a task.")
 
-        # Basic keyword-based priority boost
+# Clear Tasks
+if st.button("Clear My Tasks ❌"):
+    st.session_state.tasks.clear()
+    st.success("Your task list has been cleared!")
+
+# Prioritize Button (works independently)
+if st.button("Prioritize My Day 💡"):
+    all_input_tasks = [task.strip() for task in tasks_input.split(",") if task.strip()]
+
+    if not all_input_tasks:
+        st.warning("Please enter some tasks to prioritize.")
+    else:
+        st.markdown("### ✅ Your Prioritized Tasks:")
+
         priority_keywords = ["urgent", "important", "asap", "today", "now", "deadline"]
+        tiring_words = ["report", "presentation", "fix", "debug", "analyze", "meeting"]
+
         def get_score(task):
             score = 0
             task_lower = task.lower()
             for word in priority_keywords:
                 if word in task_lower:
                     score += 2
-            # Boost based on task length as a basic complexity marker
             if len(task_lower) > 25:
                 score += 1
             return score
 
-        # Mood influence
-        mood_filter = {
-            "Energetic ⚡": lambda s: s >= 1,
-            "Neutral ☁": lambda s: s >= 0,
-            "Tired 💤": lambda s: s <= 2
-        }
+        def is_tiring(task):
+            task_lower = task.lower()
+            return any(word in task_lower for word in priority_keywords + tiring_words)
 
-        # Score, filter and sort tasks
-        scored_tasks = [(task, get_score(task)) for task in tasks]
-        filtered = list(filter(lambda x: mood_filter[mood](x[1]), scored_tasks))
-        sorted_tasks = sorted(filtered, key=lambda x: x[1], reverse=True)
+        scored_tasks = [(task, get_score(task)) for task in all_input_tasks]
 
-        st.success("Here’s your calm, personalized plan for today:")
+        # Mood filtering
+        if mood == "Tired 💤":
+            filtered_tasks = [(t, s) for t, s in scored_tasks if not is_tiring(t)]
+        elif mood == "Neutral ☁":
+            filtered_tasks = [(t, s) for t, s in scored_tasks if s <= 2]
+        else:  # Energetic ⚡
+            filtered_tasks = scored_tasks
+
+        sorted_tasks = sorted(filtered_tasks, key=lambda x: x[1], reverse=True)
+
         if sorted_tasks:
             for i, (task, score) in enumerate(sorted_tasks, start=1):
                 emoji = "🔥" if score > 2 else "✅"
                 st.write(f"{i}.** {task} {emoji}")
         else:
-            st.info("None of your tasks matched your current mood. Want to try rewording or reselect your mood?")
+            st.info("No low-effort tasks found for your current energy level.")
