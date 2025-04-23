@@ -35,23 +35,25 @@ st.markdown("""
         html, body, [class*="css"] {
             font-family: 'Poppins', sans-serif;
             background-color: #fffaf3;
+            color: #222 !important;
         }
 
         .header {
             font-size: 36px;
             text-align: center;
-            color: #2d2d2d;
+            color: #111 !important;
             margin-bottom: 5px;
         }
 
         .subtext {
             text-align: center;
             font-size: 17px;
-            color: #666;
+            color: #333 !important;
         }
 
         .card {
-            background-color: #e0f7fa;
+            background-color: #f0f8ff;
+            color: #111 !important;
             padding: 15px 20px;
             border-left: 5px solid #4da6ff;
             border-radius: 10px;
@@ -59,54 +61,42 @@ st.markdown("""
         }
 
         .soft-block {
-            background-color: #f3e8ff;
+            background-color: #fef6ff;
             padding: 20px;
             border-radius: 12px;
+            color: #111 !important;
             margin: 20px 0;
-        }
-
-        .reminder {
-            font-style: italic;
-            font-size: 16px;
-            color: #336699;
-        }
-
-        .quote {
-            font-size: 18px;
-            color: #222;
-            text-align: center;
-            margin-top: 10px;
-            font-style: italic;
         }
 
         .emoji-banner {
             text-align: center;
             font-size: 28px;
             margin-top: 10px;
+            color: #111 !important;
         }
-        /* Ensure checkbox and text elements are visible */
-input, textarea, label, div[class*="stCheckbox"] label {
-    color: #222 !important;
-}
 
-.stTextInput > div > div > input {
-    background-color: #fff !important;
-    color: #222 !important;
-    border: 1px solid #ccc;
-}
+        input, textarea, label, div[class*="stCheckbox"] label {
+            color: #111 !important;
+        }
 
-.stTextArea textarea {
-    background-color: #fff !important;
-    color: #222 !important;
-    border: 1px solid #ccc;
-}
+        .stTextInput > div > div > input {
+            background-color: #fff !important;
+            color: #111 !important;
+            border: 1px solid #ccc;
+        }
 
-.css-1cpxqw2, .stMarkdown p {
-   color: #222 !important;
-}
+        .stTextArea textarea {
+            background-color: #fff !important;
+            color: #111 !important;
+            border: 1px solid #ccc;
+        }
+
+        .css-1cpxqw2, .stMarkdown p, .stButton>button {
+            color: #111 !important;
+        }
+
     </style>
 """, unsafe_allow_html=True)
-
 # ----------------- Header -----------------
 st.markdown("<div class='header'>✨ SmartTaskBot✨</div>", unsafe_allow_html=True)
 st.markdown("<div class='subtext'>Gentle planning, made for your mood.</div>", unsafe_allow_html=True)
@@ -241,6 +231,7 @@ with col_clear:
     if st.button("🧹 Clear All Tasks"):
         clear_all_tasks(user_name)
         st.success("Your saved tasks have been cleared.")
+        st.rerun()
         
 # ----------------- Task Intensity -----------------
 def estimate_duration(text):
