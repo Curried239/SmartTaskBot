@@ -4,13 +4,11 @@ from pathlib import Path
 import random
 import time
 from datetime import datetime, timedelta
-import re
-import json
+import pytz
 
-# ----------------- SQLite Functions -----------------
+# ----------------- Setup DB -----------------
 DB_FILE = Path("tasks.db")
 
-# ----------------- SQLite Functions -----------------
 def init_db():
     with sqlite3.connect(DB_FILE) as conn:
         conn.execute("""
@@ -18,355 +16,323 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 text TEXT NOT NULL,
                 done BOOLEAN NOT NULL DEFAULT 0,
-                created_at TEXT NOT NULL
+                created_at TEXT NOT NULL,
+                user_name TEXT NOT NULL
             )
         """)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS user_info (
-                id INTEGER PRIMARY KEY,
-                name TEXT,
-                mood TEXT
-            )
-        """)
-        user = conn.execute("SELECT * FROM user_info WHERE id = 1").fetchone()
-        if not user:
-            conn.execute("INSERT INTO user_info (id, name, mood) VALUES (1, '', '')")
         conn.commit()
 
-def add_task(text):
-    with sqlite3.connect(DB_FILE) as conn:
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        conn.execute("INSERT INTO tasks (text, done, created_at) VALUES (?, 0, ?)", (text, now))
-        conn.commit()
-
-def get_all_tasks():
-    with sqlite3.connect(DB_FILE) as conn:
-        rows = conn.execute("SELECT id, text, done, created_at FROM tasks").fetchall()
-        return [{"id": row[0], "text": row[1], "done": bool(row[2]), "created_at": row[3]} for row in rows]
-
-def update_task_status(task_id, done):
-    with sqlite3.connect(DB_FILE) as conn:
-        conn.execute("UPDATE tasks SET done = ? WHERE id = ?", (done, task_id))
-        conn.commit()
-
-def clear_all_tasks():
-    with sqlite3.connect(DB_FILE) as conn:
-        conn.execute("DELETE FROM tasks")
-        conn.commit()
-        
-
-def get_user_info():
-    with sqlite3.connect(DB_FILE) as conn:
-        result = conn.execute("SELECT name, mood FROM user_info WHERE id = 1").fetchone()
-        return {"name": result[0], "mood": result[1]} if result else {"name": "", "mood": ""}
-
-def update_user_info(name, mood):
-    with sqlite3.connect(DB_FILE) as conn:
-        conn.execute("UPDATE user_info SET name = ?, mood = ? WHERE id = 1", (name, mood))
-        conn.commit()
-# ----------------- Initialize -----------------
 init_db()
-user_info = get_user_info()
 
-# Load custom font
+# ----------------- Page Setup -----------------
+st.set_page_config(page_title="SmartTaskBot", page_icon="✨", layout="centered")
+
+# ----------------- Styles -----------------
 st.markdown("""
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        h1, h2, h3, h4, h5 {
-            color: #f5a623;
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;500&display=swap');
+
+        html, body, [class*="css"] {
+            font-family: 'Poppins', sans-serif;
+            background-color: #fffaf3;
         }
-        .stTextInput > div > div > input {
-            background-color: #333 !important;
-            color: #fefefe !important;
-            border: 1px solid #555;
+
+        .header {
+            font-size: 36px;
+            text-align: center;
+            color: #2d2d2d;
+            margin-bottom: 5px;
         }
-        .stTextArea textarea {
-            background-color: #333 !important;
-            color: #fefefe !important;
+
+        .subtext {
+            text-align: center;
+            font-size: 17px;
+            color: #666;
         }
-        .stButton>button {
-            background-color: #f5a623;
-            color: black;
-            border-radius: 8px;
-            font-weight: bold;
+
+        .card {
+            background-color: #e0f7fa;
+            padding: 15px 20px;
+            border-left: 5px solid #4da6ff;
+            border-radius: 10px;
+            margin: 15px 0;
         }
-        .stButton>button:hover {
-            background-color: #f7c65b;
-            color: black;
+
+        .soft-block {
+            background-color: #f3e8ff;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
         }
+
+        .reminder {
+            font-style: italic;
+            font-size: 16px;
+            color: #336699;
+        }
+
+        .quote {
+            font-size: 18px;
+            color: #222;
+            text-align: center;
+            margin-top: 10px;
+            font-style: italic;
+        }
+
         .emoji-banner {
-            font-size: 32px;
-            text-align: right;
-            margin-top: -40px;
-            margin-right: 10px;
-            animation: float 3s ease-in-out infinite;
-        }
-        @keyframes float {
-            0% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
-            100% { transform: translateY(0); }
+            text-align: center;
+            font-size: 28px;
+            margin-top: 10px;
         }
     </style>
 """, unsafe_allow_html=True)
 
+# ----------------- Header -----------------
+st.markdown("<div class='header'>✨ SmartTaskBot✨</div>", unsafe_allow_html=True)
+st.markdown("<div class='subtext'>Gentle planning, made for your mood.</div>", unsafe_allow_html=True)
 
-# ----------------- SmartCare Reminders -----------------
+# ----------------- Quote -----------------
+quotes = [
+    "“Small steps every day lead to big change.”",
+    "“You don’t need to do everything — just something.”",
+    "“Even one task done is progress.”",
+    "“Work gently. Rest proudly.”",
+    "“Start where you are. Use what you have. Do what you can.”"
+]
+st.markdown(f"<div class='quote'>{random.choice(quotes)}</div>", unsafe_allow_html=True)
+
+# ----------------- Reminder -----------------
 reminders = [
-    "Take a deep breath and stretch a little!",
-    "Stay hydrated — a glass of water never hurts.",
-    "You’re doing amazing. Consider a 5-minute break?",
-    "Even small steps count — keep going at your pace.",
-    "Don’t forget to smile today. You’re making progress!"
+    "Take a deep breath and stretch a little.",
+    "Stay hydrated — drink some water.",
+    "Don’t forget your lunch today!",
+    "Your mind is powerful — even if you're tired.",
+    "Try to take a 5-minute break after every hour.",
+    "Smile! You're doing better than you think."
 ]
 
 if 'last_reminder_time' not in st.session_state:
     st.session_state['last_reminder_time'] = time.time()
 
 if time.time() - st.session_state['last_reminder_time'] > 0:
-    st.sidebar.info(random.choice(reminders))
+    st.markdown(f"<div class='card reminder'>🧘 {random.choice(reminders)}</div>", unsafe_allow_html=True)
     st.session_state['last_reminder_time'] = time.time()
 
-# ----------------- UI -----------------
-    # Top Branding Header
-st.markdown("<h1 style='text-align: center;'>✨ SmartTaskBot</h1>", unsafe_allow_html=True)
-st.caption("Your gentle AI planner with mood-aware scheduling")
+# ----------------- Preferences -----------------
+with st.expander("⚙ Preferences"):
+    name = st.text_input("Your Name (optional)", placeholder="e.g., Anicka")
+    timezone_list = pytz.all_timezones
+    selected_tz = st.selectbox("Your Timezone", timezone_list, index=timezone_list.index("Asia/Kolkata"))
+    st.caption("Used to plan your day in your local time")
 
-name = st.text_input("What's your name?", value=user_info["name"])
-mood_options = ["Energetic ⚡", "Neutral ☁", "Tired 💤"]
-mood_index = mood_options.index(user_info["mood"]) if user_info["mood"] in mood_options else 0
-mood = st.radio("How are you feeling today?", mood_options, index=mood_index)
+user_name = name.strip().lower() if name.strip() else "guest_user"
+now = datetime.now(pytz.timezone(selected_tz))
+greeting_time = now.strftime("%A, %I:%M %p")
 
-update_user_info(name.strip(), mood)
-
-greeting = datetime.now().strftime("%A, %I:%M %p")
 if name.strip():
-    st.subheader(f"Hi {name.strip().title()} — Today is {greeting}. Let’s gently plan your day.")
+    st.markdown(f"<div class='emoji-banner'>Hi <b>{name.strip().title()}</b> — {greeting_time}</div>", unsafe_allow_html=True)
 else:
-    st.subheader(f"Today is {greeting}. Let’s gently plan your day.")
+    st.markdown(f"<div class='emoji-banner'>Hi there! — {greeting_time}</div>", unsafe_allow_html=True)
 
-# Mood-based emoji banner
-mood_emoji = {
-    "Energetic ⚡": "⚡",
-    "Neutral ☁": "☁",
-    "Tired 💤": "💤"
-}
-if mood in mood_emoji:
-    st.markdown(f"<div class='emoji-banner'>{mood_emoji[mood]}</div>", unsafe_allow_html=True)
+# ----------------- Help Section -----------------
+with st.expander("ℹ How to Use SmartTaskBot"):
+    st.markdown("""
+    - *Enter your name* (optional) and timezone.
+    - *Type your tasks* in any format — new lines, commas, or semicolons.
+    - *Plan My Day* will organize tasks based on your energy level.
+    - *Add to My Tasks* saves them so you can track or mark them later.
+    - *Mark as Done* appears after adding tasks.
+    - *Need Help?!
+    """)
 
-# ----------------- Task Input -----------------
-tasks_input = st.text_area("📝 Enter tasks (comma-separated):", placeholder="e.g., finish homework, clean room")
+# ----------------- Mood + Task Input -----------------
+st.markdown("<div class='soft-block'>", unsafe_allow_html=True)
 
-# Load tasks from DB
-existing_tasks = get_all_tasks()
-existing_texts = [t["text"].strip().lower() for t in existing_tasks]
+col1, col2 = st.columns(2)
+with col1:
+    mood = st.radio("How are you feeling today?", ["Energetic ⚡", "Neutral ☁", "Tired 💤"])
+with col2:
+    raw_input = st.text_area("📝 Enter tasks (in any format)", placeholder="e.g., Finish report\nBuy milk; call mom")
 
-if st.button("Add to My Day"):
-    if tasks_input.strip():
-        new_tasks = [task.strip() for task in tasks_input.split(",") if task.strip()]
-        added = False
-        for task in new_tasks:
-            if task.lower() not in existing_texts:
-                add_task(task)
-                added = True
-        if added:
-            st.success("Tasks added to your day!")
+st.caption("Tip: You can write tasks in any way — we’ll organize it!")
+
+st.markdown("</div>", unsafe_allow_html=True)
+
+# ----------------- Task Processing -----------------
+# Accept tasks in any format (comma, newline, semicolon)
+def parse_tasks(text):
+    splitters = [',', ';', '\n']
+    for sep in splitters:
+        text = text.replace(sep, ',')
+    return [t.strip() for t in text.split(',') if t.strip()]
+
+parsed_tasks = parse_tasks(raw_input)
+parsed_objects = [{"text": t, "done": False, "created_at": now.strftime("%Y-%m-%d %H:%M:%S")} for t in parsed_tasks]
+
+# ----------------- DB Functions -----------------
+def get_all_tasks(user_name):
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("SELECT * FROM tasks WHERE user_name = ?", (user_name,)).fetchall()
+        return [dict(row) for row in rows]
+
+def add_task(text, user_name):
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.execute("INSERT INTO tasks (text, done, created_at, user_name) VALUES (?, ?, ?, ?)",
+                     (text, False, datetime.now().isoformat(), user_name))
+        conn.commit()
+
+def clear_all_tasks(user_name):
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.execute("DELETE FROM tasks WHERE user_name = ?", (user_name,))
+        conn.commit()
+
+def update_task_status(task_id, done):
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.execute("UPDATE tasks SET done = ? WHERE id = ?", (done, task_id))
+        conn.commit()
+
+# ----------------- Current Task Pool -----------------
+saved_tasks = get_all_tasks(user_name)
+existing_texts = [t["text"].lower() for t in saved_tasks]
+current_tasks = parsed_objects if parsed_tasks else saved_tasks
+
+# ----------------- Buttons: PLAN → ADD → CLEAR -----------------
+col_plan, col_add, col_clear = st.columns(3)
+with col_plan:
+    plan_clicked = st.button("✨ Plan My Day")
+
+with col_add:
+    if st.button("📌 Add to My Tasks"):
+        if parsed_tasks:
+            added = False
+            for task in parsed_tasks:
+                if task.lower() not in existing_texts:
+                    add_task(task, user_name)
+                    added = True
+            if added:
+                st.success("Tasks added successfully!")
+            else:
+                st.info("No new tasks to add.")
         else:
-            st.warning("All entered tasks already exist.")
-    else:
-        st.warning("Please enter at least one task.")
+            st.warning("Please enter tasks first.")
 
-if st.button("Clear My Tasks ❌"):
-    clear_all_tasks()
-    st.success("Your task list has been cleared!")
-# ----------------- Helper: Estimate Duration -----------------
+with col_clear:
+    if st.button("🧹 Clear All Tasks"):
+        clear_all_tasks(user_name)
+        st.success("Your saved tasks have been cleared.")
+        
+# ----------------- Task Intensity -----------------
 def estimate_duration(text):
-    high_keywords = ["report", "presentation", "debug", "analyze", "fix", "project"]
-    medium_keywords = ["homework", "write", "review", "prepare"]
-    low_keywords = ["email", "call", "reply", "clean", "read"]
-
     lower = text.lower()
-    if any(word in lower for word in high_keywords):
+    if any(w in lower for w in ["report", "presentation", "debug", "analyze", "fix"]):
         return 45
-    elif any(word in lower for word in medium_keywords):
+    elif any(w in lower for w in ["homework", "review", "prepare", "write"]):
         return 30
     else:
         return 15
 
-# ----------------- Timeline Generator -----------------
+# ----------------- Mood-Based Filtering -----------------
+def mood_filter(tasks, mood):
+    def get_level(text):
+        lower = text.lower()
+        if any(w in lower for w in ["report", "presentation", "fix", "debug"]):
+            return "high"
+        elif any(w in lower for w in ["review", "homework", "write"]):
+            return "medium"
+        else:
+            return "low"
+
+    def keep(task):
+        level = get_level(task["text"])
+        if mood == "Tired 💤" and level in ["high", "medium"]:
+            return False
+        if mood == "Neutral ☁" and level == "high":
+            return False
+        return True
+
+    return [t for t in tasks if keep(t)]
+
+# ----------------- Generate Schedule -----------------
 def generate_schedule(tasks):
-    now = datetime.now().replace(second=0, microsecond=0)
+    start_time = datetime.now(pytz.timezone(selected_tz)).replace(second=0, microsecond=0)
     schedule = []
-    used_slots = set()
-    last_time = now
-
-    # Remove done tasks
-    tasks = [t for t in tasks if not t["done"]]
-
-    # Sort by created_at
-    tasks = sorted(tasks, key=lambda x: x["created_at"])
+    current = start_time
 
     for task in tasks:
         duration = estimate_duration(task["text"])
-        start = last_time
-        end = start + timedelta(minutes=duration)
-
+        end = current + timedelta(minutes=duration)
         schedule.append({
-            "time": f"{start.strftime('%I:%M %p')} - {end.strftime('%I:%M %p')}",
+            "time": f"{current.strftime('%I:%M %p')} - {end.strftime('%I:%M %p')}",
             "text": task["text"],
-            "emoji": "✅" if duration <= 15 else "📚" if duration <= 30 else "🔥"
+            "emoji": "🔥" if duration > 30 else "📚" if duration == 30 else "✅"
         })
-        last_time = end
+        current = end
 
-        # Insert breaks every hour
-        if (last_time - now).seconds % 3600 == 0:
+        # Insert break every hour
+        if (current - start_time).seconds % 3600 == 0:
             schedule.append({
-                "time": f"{last_time.strftime('%I:%M %p')} - {(last_time + timedelta(minutes=5)).strftime('%I:%M %p')}",
+                "time": f"{current.strftime('%I:%M %p')} - {(current + timedelta(minutes=5)).strftime('%I:%M %p')}",
                 "text": "Break ☕",
                 "emoji": "☕"
             })
-            last_time += timedelta(minutes=5)
+            current += timedelta(minutes=5)
 
-    # Insert fixed meal times
-    def insert_meal(target_time, label, icon):
-        meal_time = now.replace(hour=target_time, minute=0)
-        if meal_time > now and all(meal_time.strftime('%I:%M %p') not in s["time"] for s in schedule):
-            schedule.append({
-                "time": f"{meal_time.strftime('%I:%M %p')} - {(meal_time + timedelta(minutes=30)).strftime('%I:%M %p')}",
-                "text": label,
-                "emoji": icon
-            })
-
-    insert_meal(9, "Breakfast 🥣", "🥣")
-    insert_meal(13, "Lunch 🍽", "🍽")
-    insert_meal(20, "Dinner 🍛", "🍛")
-    insert_meal(18, "Wrap-up your day 🌙", "🌙")
-
-    # Final sort by time
-    schedule = sorted(schedule, key=lambda x: datetime.strptime(x["time"].split(" - ")[0], "%I:%M %p"))
     return schedule
 
-# ----------------- Prioritize & Display Smart Day Plan -----------------
-if st.button("Prioritize My Day 💡"):
-    # Step 1: Use typed input if present, else use DB tasks
-    input_tasks = [task.strip() for task in tasks_input.split(",") if task.strip()]
-    use_input = bool(input_tasks)
-
-    if use_input:
-        task_list = [{"text": t, "done": False, "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")} for t in input_tasks]
+# ----------------- Show Smart Plan -----------------
+if plan_clicked:
+    if not current_tasks:
+        st.warning("No tasks found. Please enter or save tasks first.")
     else:
-        task_list = get_all_tasks()
-        task_list = [t for t in task_list if not t["done"]]  # Only show incomplete tasks
+        mood_tasks = mood_filter(current_tasks, mood)
+        plan = generate_schedule(mood_tasks)
 
-    if not task_list:
-        st.warning("Please enter tasks or use 'Add to My Day' first.")
-    else:
-        # Step 2: Filter by energy level
-        def get_intensity(text):
-            text = text.lower()
-            if any(x in text for x in ["debug", "report", "analyze", "fix"]):
-                return "high"
-            elif any(x in text for x in ["write", "homework", "review"]):
-                return "medium"
-            else:
-                return "low"
-
-        def mood_filter(task):
-            level = get_intensity(task["text"])
-            if mood == "Tired 💤" and level in ["medium", "high"]:
-                return False
-            if mood == "Neutral ☁" and level == "high":
-                return False
-            return True
-
-        filtered_tasks = [t for t in task_list if mood_filter(t)]
-
-        # Step 3: Generate and show schedule
-        def estimate_duration(text):
-            level = get_intensity(text)
-            return 45 if level == "high" else 30 if level == "medium" else 15
-
-        def generate_schedule(tasks):
-            now = datetime.now().replace(second=0, microsecond=0)
-            last_time = now
-            plan = []
-
-            for task in tasks:
-                duration = estimate_duration(task["text"])
-                start = last_time
-                end = start + timedelta(minutes=duration)
-                plan.append({
-                    "time": f"{start.strftime('%I:%M %p')} - {end.strftime('%I:%M %p')}",
-                    "text": task["text"],
-                    "emoji": "🔥" if duration > 30 else "📚" if duration == 30 else "✅"
-                })
-                last_time = end
-
-                if (last_time - now).seconds % 3600 == 0:
-                    plan.append({
-                        "time": f"{last_time.strftime('%I:%M %p')} - {(last_time + timedelta(minutes=5)).strftime('%I:%M %p')}",
-                        "text": "Break ☕",
-                        "emoji": "☕"
-                    })
-                    last_time += timedelta(minutes=5)
-
-            return plan
-
-        schedule = generate_schedule(filtered_tasks)
-
-        st.markdown("### 🕒 Your Smart Day Plan")
-        if schedule:
-            for item in schedule:
-                st.write(f"{item['time']} → {item['text']} {item['emoji']}")
+        if plan:
+            st.markdown("### 🗓 Your Smart Day Plan")
+            for p in plan:
+                st.markdown(f"<div class='card'>{p['time']} → {p['text']} {p['emoji']}</div>", unsafe_allow_html=True)
         else:
-            st.info("No tasks matched your current energy level.")
-# ----------------- Smart Suggestions -----------------
-st.markdown("### ✨ Need Help With Any Task?")
+            st.info("No tasks matched your current mood energy level.")
 
-suggestion_map = {
-    "email": f"Subject: Following up on [topic]\n\nHi [Recipient's Name],\n\nI hope this message finds you well. I just wanted to follow up regarding [your task].\n\nPlease let me know if you need anything from my side.\n\nWarm regards,\n{name.strip().title() if name.strip() else '[Your Name]'}",
-    "call": "Hi [Name], just wanted to check if we can catch up on [topic]. Let me know a good time to call.",
-    "meeting": "Meeting Agenda:\n1. Review [topic]\n2. Discuss next steps\n3. Q&A\n\nDuration: 30 minutes",
-    "homework": "Try this:\n- Study for 25 minutes\n- 5-minute break\n- Repeat 2-3 times\n\nYou’ve got this!",
-    "grocery": "Grocery List:\n- Milk\n- Bread\n- Fruits\n- Eggs\n\nTip: Use a note app while shopping!",
-    "clean": "Set a 10-minute timer, put on music, and clean one surface at a time. You’ll feel better after even 10 minutes!"
-}
+# ----------------- Mark As Done & Suggestions -----------------
+if saved_tasks:
+    st.markdown("### ✅ Mark Your Completed Tasks")
+    task_done = False
+    for task in saved_tasks:
+        checked = st.checkbox(task["text"], value=task["done"], key=f"task_{task['id']}")
+        if checked != task["done"]:
+            update_task_status(task["id"], checked)
+            task_done = True
 
-task_keywords = {
-    "email": ["email", "mail", "message", "send", "reply"],
-    "call": ["call", "phone", "talk", "speak"],
-    "meeting": ["meeting", "zoom", "appointment", "schedule"],
-    "homework": ["homework", "study", "assignment", "prepare"],
-    "grocery": ["grocery", "shopping", "buy", "purchase"],
-    "clean": ["clean", "organize", "tidy", "declutter"]
-}
+    if task_done:
+        st.success("Great job! You completed a task!")
+        st.balloons()
 
-# Use either typed tasks or DB
-all_suggestions = (
-    [{"text": t.strip()} for t in tasks_input.split(",") if t.strip()]
-    if tasks_input.strip()
-    else get_all_tasks()
-)
+    # ----------------- Smart Suggestions -----------------
+    st.markdown("### ✨ Need Help With a Task?")
+    suggestion_map = {
+        "email": f"Subject: Follow-up\n\nHi [Name],\nJust checking in on [topic]. Let me know your thoughts.\n\nThanks,\n{name.strip().title()}",
+        "call": "Call script: Hi! Just wanted to connect quickly about [topic]. Is now a good time?",
+        "meeting": "Meeting Outline:\n- Agenda overview\n- Discussion\n- Action steps\n- Q&A",
+        "homework": "Try: 25 mins focused study + 5 min break. Repeat 3x. Pomodoro works wonders!",
+        "clean": "Tip: Play a 10-minute timer and clean one area. Small wins = motivation!"
+    }
 
-for task in all_suggestions:
-    task_lower = task["text"].lower()
-    for category, keywords in task_keywords.items():
-        if any(word in task_lower for word in keywords):
-            with st.expander(f"Need help with: '{task['text']}'"):
-                if st.button(f"Show suggestion for: {task['text']}", key=f"suggest_{task['text']}"):
+    keywords = {
+        "email": ["email", "mail", "send", "reply"],
+        "call": ["call", "phone", "speak"],
+        "meeting": ["meeting", "zoom", "call", "agenda"],
+        "homework": ["study", "homework", "assignment"],
+        "clean": ["clean", "organize", "declutter"]
+    }
+
+    for task in saved_tasks:
+        task_lower = task["text"].lower()
+        for category, keys in keywords.items():
+            if any(k in task_lower for k in keys):
+                with st.expander(f"💡 Help with: {task['text']}"):
                     st.code(suggestion_map[category], language="markdown")
-            break
-
-
-# ----------------- Mark as Done -----------------
-task_completed = False
-
-st.markdown("### ☑ Mark Your Completed Tasks")
-for task in get_all_tasks():
-    new_status = st.checkbox(task["text"], value=task["done"], key=f"task_{task['id']}")
-    if new_status != task["done"]:
-        update_task_status(task["id"], new_status)
-        task_completed = True
-
-if task_completed:
-    st.success("👏 You completed a task!")
-    st.balloons()
+                break
+else:
+    st.info("💡 To mark tasks as done or see suggestions, please add tasks to your day.")
