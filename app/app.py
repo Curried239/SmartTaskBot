@@ -32,12 +32,24 @@ st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;500&display=swap');
 
-        /* Enforce light theme */
+        /* Light mode force */
         html, body, [class*="css"] {
-            font-family: 'Poppins', sans-serif;
             background-color: #fffaf3 !important;
-            color: #222 !important;
             color-scheme: light !important;
+            font-family: 'Poppins', sans-serif !important;
+            color: #111 !important;
+        }
+
+        /* Fix for ALL streamlit-generated text */
+        h1, h2, h3, h4, h5, h6,
+        .stMarkdown, .stTextInput label,
+        .stTextArea label, .stSelectbox label,
+        .stRadio label, .stCaption, .stSubheader, .stTextInput > label,
+        .stRadio > div > label, .stTextInput > div > label,
+        label, p, div[class*="stCaption"] {
+            font-family: 'Poppins', sans-serif !important;
+            font-weight: 400 !important;
+            color: #111 !important;
         }
 
         .header {
@@ -45,6 +57,7 @@ st.markdown("""
             text-align: center;
             color: #111 !important;
             margin-bottom: 5px;
+            font-weight: 500;
         }
 
         .subtext {
@@ -79,7 +92,6 @@ st.markdown("""
             color: #111 !important;
         }
 
-        /* Input and textarea styling */
         input, textarea, label, div[class*="stCheckbox"] label {
             color: #111 !important;
             font-family: 'Poppins', sans-serif !important;
@@ -97,7 +109,6 @@ st.markdown("""
             border: 1px solid #ccc;
         }
 
-        /* Buttons */
         .stButton > button {
             background-color: #fbd3f5;
             color: #222 !important;
@@ -109,11 +120,6 @@ st.markdown("""
         .stButton > button:hover {
             background-color: #ffc7ec;
             color: black;
-        }
-
-        /* Markdown & text fix */
-        .css-1cpxqw2, .stMarkdown p, .stButton>button {
-            color: #111 !important;
         }
     </style>
 """, unsafe_allow_html=True)
