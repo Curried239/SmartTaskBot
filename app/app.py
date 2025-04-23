@@ -32,10 +32,12 @@ st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;500&display=swap');
 
+        /* Enforce light theme */
         html, body, [class*="css"] {
             font-family: 'Poppins', sans-serif;
-            background-color: #fffaf3;
+            background-color: #fffaf3 !important;
             color: #222 !important;
+            color-scheme: light !important;
         }
 
         .header {
@@ -58,7 +60,7 @@ st.markdown("""
             border-left: 5px solid #4da6ff;
             border-radius: 10px;
             margin: 15px 0;
-            ont-family: 'Poppins', sans-serif !important;
+            font-family: 'Poppins', sans-serif !important;
         }
 
         .soft-block {
@@ -67,6 +69,7 @@ st.markdown("""
             border-radius: 12px;
             color: #111 !important;
             margin: 20px 0;
+            font-family: 'Poppins', sans-serif !important;
         }
 
         .emoji-banner {
@@ -76,8 +79,10 @@ st.markdown("""
             color: #111 !important;
         }
 
+        /* Input and textarea styling */
         input, textarea, label, div[class*="stCheckbox"] label {
             color: #111 !important;
+            font-family: 'Poppins', sans-serif !important;
         }
 
         .stTextInput > div > div > input {
@@ -92,6 +97,21 @@ st.markdown("""
             border: 1px solid #ccc;
         }
 
+        /* Buttons */
+        .stButton > button {
+            background-color: #fbd3f5;
+            color: #222 !important;
+            border-radius: 8px;
+            font-weight: 600;
+            font-family: 'Poppins', sans-serif !important;
+        }
+
+        .stButton > button:hover {
+            background-color: #ffc7ec;
+            color: black;
+        }
+
+        /* Markdown & text fix */
         .css-1cpxqw2, .stMarkdown p, .stButton>button {
             color: #111 !important;
         }
