@@ -84,6 +84,26 @@ st.markdown("""
             font-size: 28px;
             margin-top: 10px;
         }
+        /* Ensure checkbox and text elements are visible */
+input, textarea, label, div[class*="stCheckbox"] label {
+    color: #222 !important;
+}
+
+.stTextInput > div > div > input {
+    background-color: #fff !important;
+    color: #222 !important;
+    border: 1px solid #ccc;
+}
+
+.stTextArea textarea {
+    background-color: #fff !important;
+    color: #222 !important;
+    border: 1px solid #ccc;
+}
+
+.css-1cpxqw2, .stMarkdown p {
+   color: #222 !important;
+}
     </style>
 """, unsafe_allow_html=True)
 
