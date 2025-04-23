@@ -33,13 +33,8 @@ st.markdown("""
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;500&display=swap');
 
         html, body, [class*="css"] {
-            font-family: 'Poppins', sans-serif !important;
+            font-family: 'Poppins', sans-serif;
             background-color: #fffaf3;
-            color: #222 !important;
-        }
-
-        h1, h2, h3, h4, h5, h6, p, div, label, input, textarea, .stMarkdown, .stButton > button, .stCheckbox {
-            font-family: 'Poppins', sans-serif !important;
             color: #222 !important;
         }
 
@@ -63,7 +58,7 @@ st.markdown("""
             border-left: 5px solid #4da6ff;
             border-radius: 10px;
             margin: 15px 0;
-            font-family: 'Poppins', sans-serif !important;
+            ont-family: 'Poppins', sans-serif !important;
         }
 
         .soft-block {
@@ -81,35 +76,29 @@ st.markdown("""
             color: #111 !important;
         }
 
-        .stTextInput > div > div > input,
+        input, textarea, label, div[class*="stCheckbox"] label {
+            color: #111 !important;
+        }
+
+        .stTextInput > div > div > input {
+            background-color: #fff !important;
+            color: #111 !important;
+            border: 1px solid #ccc;
+        }
+
         .stTextArea textarea {
             background-color: #fff !important;
             color: #111 !important;
             border: 1px solid #ccc;
-            font-family: 'Poppins', sans-serif !important;
         }
 
-        input, textarea, label, div[class*="stCheckbox"] label {
+        .css-1cpxqw2, .stMarkdown p, .stButton>button {
             color: #111 !important;
-            font-family: 'Poppins', sans-serif !important;
-        }
-
-        .stButton > button {
-            background-color: #fbd3f5;
-            color: #222 !important;
-            border-radius: 8px;
-            font-weight: 500;
-            font-family: 'Poppins', sans-serif !important;
-        }
-
-        .stButton > button:hover {
-            background-color: #ffc7ec;
-            color: black;
         }
     </style>
 """, unsafe_allow_html=True)
 # ----------------- Header -----------------
-st.markdown("<div class='header'>✨ SmartTaskBot✨</div>", unsafe_allow_html=True)
+st.markdown("<div class='header'>✨ SmartTaskBot</div>", unsafe_allow_html=True)
 st.markdown("<div class='subtext'>Gentle planning, made for your mood.</div>", unsafe_allow_html=True)
 
 # ----------------- Quote -----------------
